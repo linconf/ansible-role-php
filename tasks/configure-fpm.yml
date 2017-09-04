@@ -33,41 +33,24 @@
     mode: 0755
   when: php_fpm_pool_conf_path_dir_stat.stat.islnk is not defined
 
-- name: Ensure the default pool exists.
-  template:
-    src: www.conf.j2
-    dest: "{{ php_fpm_pool_conf_path }}"
-    owner: root
-    group: root
-    mode: 0644
-    force: no
-  when: php_enable_php_fpm
+#|  Configure PHP-FPM Pools
 
-- name: Configure php-fpm pool (if enabled).
-  lineinfile:
-    dest: "{{ php_fpm_pool_conf_path }}"
-    regexp: "{{ item.regexp }}"
-    line: "{{ item.line }}"
-    state: present
-  with_items:
-    - regexp: "^user.?=.+$"
-      line: "user = {{ php_fpm_pool_user }}"
-    - regexp: "^group.?=.+$"
-      line: "group = {{ php_fpm_pool_group }}"
-    - regexp: "^listen.?=.+$"
-      line: "listen = {{ php_fpm_listen }}"
-    - regexp: '^listen\.allowed_clients.?=.+$'
-      line: "listen.allowed_clients = {{ php_fpm_listen_allowed_clients }}"
-    - regexp: '^pm\.max_children.?=.+$'
-      line: "pm.max_children = {{ php_fpm_pm_max_children }}"
-    - regexp: '^pm\.start_servers.?=.+$'
-      line: "pm.start_servers = {{ php_fpm_pm_start_servers }}"
-    - regexp: '^pm\.min_spare_servers.?=.+$'
-      line: "pm.min_spare_servers = {{ php_fpm_pm_min_spare_servers }}"
-    - regexp: '^pm\.max_spare_servers.?=.+$'
-      line: "pm.max_spare_servers = {{ php_fpm_pm_max_spare_servers }}"
-  when: php_enable_php_fpm
-  notify: restart php-fpm
+- name: config-fpm - Remove Default POOL Configuration File
+  file:
+    path: "{{ php_fpm_pool_conf_path }}/{{ php_fpm_default_pool.name }}"
+    state: absent
+  when: php_fpm_default_pool.delete
+
+- name: config-fpm - Generate POOL Configuration Files
+  template:
+    src: pool.conf.j2
+    dest: "{{ php_fpm_pool_conf_path }}/{{ item['name'] }}.conf"
+    backup: yes
+  with_items: php_fpm_pools
+  when: php_fpm_pools|lower != 'none'
+  notify:
+   - handler - restart php-fpm
+
 
 - name: Ensure php-fpm is started and enabled at boot (if configured).
   service:
