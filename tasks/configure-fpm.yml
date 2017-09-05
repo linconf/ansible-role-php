@@ -42,19 +42,16 @@
 
 - name: config-fpm - Remove Default POOL Configuration File
   file:
-    path: "{{ php_fpm_pool_path }}/{{ php_fpm_default_pool.name }}"
+    path: "{{ php_fpm_pool_path | dirname }}/{{ php_fpm_default_pool.name }}"
     state: absent
   when: php_fpm_default_pool.delete
 
 - name: config-fpm - Generate POOL Configuration Files
   template:
     src: pool.conf.j2
-    dest: "{{ php_fpm_pool_path }}/{{ item['name'] }}.conf"
+    dest: "{{ php_fpm_pool_path | dirname }}/{{ item.name }}.conf"
     backup: yes
   with_items: "{{ php_fpm_pools }}"
-  notify:
-   - handler: restart php-fpm
-
 
 - name: Ensure php-fpm is started and enabled at boot (if configured).
   service:
